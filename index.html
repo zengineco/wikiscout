@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  ============================================================
+  WikiPolish v1.0.0
+  Author: Vince Gonzalez - Zengine™ — zengine.org
+  © 2026 Zengine™
+  WORKFLOW STACK: fetch Wikipedia API → LanguageTool API → render
+  ASSET MANIFEST: single-file SPA, no external dependencies except
+    Google Fonts (Special Elite, Courier Prime) + AdSense
+  ============================================================
+-->
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WikiPolish — Grammar Scout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8826956454892311" crossorigin="anonymous"></script>
+<style>
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+/* ===== CSS VARIABLES ===== */
+:root {
+  --paper:        #f5f0e8;
+  --paper-dark:   #e8e0cc;
+  --paper-worn:   #ddd5bc;
+  --ink:          #1a1410;
+  --ink-faded:    #4a3f30;
+  --ink-ghost:    #8a7a65;
+  --red-ink:      #8b1a1a;
+  --amber-ink:    #7a5a10;
+  --green-ink:    #1a5a2a;
+  --metal:        #6a6560;
+  --metal-light:  #9a9590;
+  --key-bg:       #2a2520;
+  --key-face:     #3a3530;
+  --key-shine:    #4a4540;
+  --shadow:       rgba(30,20,10,0.18);
+  --font-display: 'Special Elite', cursive;
+  --font-mono:    'Courier Prime', 'Courier New', monospace;
+}
+
+/* ===== PAPER TEXTURE BACKGROUND ===== */
+body {
+  font-family: var(--font-mono);
+  background-color: #2a2218;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 31px,
+      rgba(80,60,20,0.08) 31px,
+      rgba(80,60,20,0.08) 32px
+    );
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem 4rem;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ambient desk vignette */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, transparent 30%, rgba(10,8,4,0.55) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== TYPEWRITER MACHINE FRAME ===== */
+#machine {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 760px;
+}
+
+/* ===== PLATEN / CARRIAGE HEADER ===== */
+#platen {
+  background: linear-gradient(180deg, #4a4540 0%, #3a3530 40%, #2e2a26 100%);
+  border-radius: 12px 12px 0 0;
+  padding: 0.6rem 1.5rem 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #5a5550;
+  border-bottom: none;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.4);
+}
+
+.platen-knob {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6a6560, #2a2520);
+  border: 2px solid #5a5550;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.platen-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--metal-light);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* ===== PAPER SHEET ===== */
+#paper-wrap {
+  background: var(--paper);
+  border-left: 1px solid #b0a890;
+  border-right: 1px solid #b0a890;
+  position: relative;
+  overflow: hidden;
+}
+
+/* paper grain overlay */
+#paper-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* red margin line */
+#paper-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 56px;
+  width: 1px;
+  background: rgba(180,40,40,0.25);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ===== MASTHEAD ===== */
+#masthead {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid var(--paper-worn);
+}
+
+.masthead-rule {
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--ink) 0px, var(--ink) 4px, transparent 4px, transparent 8px);
+  margin: 0.5rem 0;
+  opacity: 0.15;
+}
+
+#masthead h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 3.6rem);
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  position: relative;
+  display: inline-block;
+}
+
+/* ink smudge on title */
+#masthead h1::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; right: -8px;
+  width: 18px; height: 6px;
+  background: var(--ink);
+  opacity: 0.07;
+  border-radius: 50%;
+  transform: rotate(-15deg);
+}
+
+.masthead-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-ghost);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+/* ===== XP / RANK STRIP ===== */
+#rank-strip {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 2rem;
+  border-bottom: 1px solid var(--paper-worn);
+  background: var(--paper-dark);
+}
+
+.rank-badge {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--ink-faded);
+  white-space: nowrap;
+}
+
+.xp-track {
+  flex: 1;
+  height: 6px;
+  background: var(--paper-worn);
+  border-radius: 0;
+  border: 1px solid var(--paper-worn);
+  overflow: hidden;
+  position: relative;
+}
+
+.xp-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ink-faded) 0px,
+    var(--ink-faded) 6px,
+    transparent 6px,
+    transparent 10px
+  );
+  width: 0%;
+  transition: width 0.7s ease;
+}
+
+.xp-fraction {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-ghost);
+  white-space: nowrap;
+}
+
+/* ===== STATS ROW ===== */
+#stats-row {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  border-bottom: 1px solid var(--paper-worn);
+}
+
+.stat-cell {
+  padding: 0.7rem 1rem;
+  text-align: center;
+  border-right: 1px solid var(--paper-worn);
+}
+.stat-cell:last-child { border-right: none; }
+
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.stat-lbl {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin-top: 2px;
+}
+
+/* ===== AD SLOT ===== */
+#ad-slot {
+  position: relative;
+  z-index: 2;
+  padding: 0.5rem 2rem;
+  border-bottom: 1px solid var(--paper-worn);
+  display: flex;
+  justify-content: center;
+  min-height: 60px;
+}
+
+/* ===== SEARCH SECTION ===== */
+#search-section {
+  position: relative;
+  z-index: 2;
+  padding: 1.5rem 2rem 1rem;
+  border-bottom: 1px solid var(--paper-worn);
+}
+
+.section-label {
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin-bottom: 0.6rem;
+  display: block;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+#article-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--ink-ghost);
+  padding: 9px 12px;
+  border-radius: 0;
+  outline: none;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.08);
+  transition: border-color 0.2s;
+}
+
+#article-input:focus {
+  border-color: var(--ink);
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.12), 0 0 0 2px rgba(26,20,16,0.08);
+}
+
+#article-input::placeholder {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.key-btn {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--paper);
+  background: var(--key-face);
+  border: none;
+  border-bottom: 3px solid var(--key-bg);
+  border-radius: 4px;
+  padding: 9px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  top: 0;
+  transition: top 0.08s, border-bottom-width 0.08s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+  user-select: none;
+}
+
+.key-btn:hover {
+  background: var(--key-shine);
+}
+
+.key-btn:active {
+  top: 2px;
+  border-bottom-width: 1px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.35);
+}
+
+.key-btn.accent {
+  background: var(--red-ink);
+  border-bottom-color: #5a0a0a;
+}
+
+.key-btn.accent:hover { background: #a02020; }
+
+/* ===== BADGES ===== */
+#badge-section {
+  position: relative;
+  z-index: 2;
+  padding: 0.75rem 2rem;
+  border-bottom: 1px solid var(--paper-worn);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  border: 1px solid var(--paper-worn);
+  padding: 3px 9px;
+  border-radius: 0;
+  opacity: 0.5;
+  transition: all 0.3s;
+}
+
+.badge.earned {
+  color: var(--green-ink);
+  border-color: var(--green-ink);
+  opacity: 1;
+  background: rgba(26,90,42,0.06);
+}
+
+/* ===== LOADING / STATUS ===== */
+#status-line {
+  position: relative;
+  z-index: 2;
+  padding: 0.6rem 2rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-ghost);
+  font-style: italic;
+  min-height: 32px;
+  border-bottom: 1px dashed var(--paper-worn);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 8px; height: 14px;
+  background: var(--ink-faded);
+  animation: blink 1.1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ===== RESULTS ===== */
+#results-section {
+  position: relative;
+  z-index: 2;
+  padding: 1.5rem 2rem;
+  display: none;
+}
+
+.result-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.result-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--ink);
+}
+
+.result-count {
+  font-size: 11px;
+  color: var(--ink-ghost);
+  letter-spacing: 0.1em;
+}
+
+/* error cards */
+.error-card {
+  display: flex;
+  gap: 12px;
+  padding: 0.8rem 0;
+  border-bottom: 1px dashed var(--paper-worn);
+  animation: typeIn 0.25s ease both;
+}
+
+@keyframes typeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.err-gutter {
+  width: 36px;
+  flex-shrink: 0;
+  padding-top: 2px;
+  text-align: right;
+}
+
+.err-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+.err-dot.grammar  { background: var(--red-ink); }
+.err-dot.spelling { background: var(--amber-ink); }
+.err-dot.style    { background: var(--green-ink); }
+
+.err-body { flex: 1; }
+
+.err-type-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.err-type-label.grammar  { color: var(--red-ink); }
+.err-type-label.spelling { color: var(--amber-ink); }
+.err-type-label.style    { color: var(--green-ink); }
+
+.err-message {
+  font-size: 13px;
+  color: var(--ink-faded);
+  margin-bottom: 5px;
+  line-height: 1.5;
+}
+
+.err-word-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.err-word {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  background: rgba(139,26,26,0.08);
+  border-bottom: 2px solid var(--red-ink);
+  padding: 1px 4px;
+}
+
+.err-arrow {
+  font-size: 11px;
+  color: var(--ink-ghost);
+}
+
+.err-fix {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--green-ink);
+  font-weight: 700;
+}
+
+/* action row */
+.action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--paper-worn);
+  flex-wrap: wrap;
+}
+
+/* ===== KEYBOARD FOOTER ===== */
+#keyboard {
+  background: linear-gradient(180deg, #3a3530 0%, #2a2520 100%);
+  border-radius: 0 0 16px 16px;
+  border: 1px solid #5a5550;
+  border-top: none;
+  padding: 1rem 1.5rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.key-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.deco-key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #8a8580;
+  background: var(--key-face);
+  border: 1px solid #5a5550;
+  border-bottom: 3px solid #1a1510;
+  border-radius: 4px;
+  width: 34px; height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.deco-key.wide { width: 56px; }
+.deco-key.xwide { width: 120px; }
+
+/* ===== CARRIAGE RETURN DING ===== */
+#ding-flash {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--red-ink);
+  opacity: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+#ding-flash.active { opacity: 1; }
+
+/* ===== FOOTER ===== */
+#site-footer {
+  position: relative;
+  z-index: 1;
+  margin-top: 2rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #5a5040;
+  letter-spacing: 0.12em;
+}
+
+#site-footer a {
+  color: #7a7060;
+  text-decoration: none;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--paper-dark); }
+::-webkit-scrollbar-thumb { background: var(--paper-worn); border-radius: 3px; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 520px) {
+  #paper-wrap::after { display: none; }
+  #rank-strip { flex-wrap: wrap; gap: 6px; }
+  #stats-row { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .action-row { flex-direction: column; }
+  .key-row { display: none; }
+  #keyboard { padding: 0.6rem 1rem 0.8rem; }
+  #masthead { padding: 1.2rem 1rem 0.8rem; }
+  #search-section, #results-section, #badge-section { padding-left: 1rem; padding-right: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="ding-flash"></div>
+
+<div id="machine">
+
+  <!-- PLATEN / CARRIAGE -->
+  <div id="platen">
+    <div class="platen-knob"></div>
+    <span class="platen-label">Underwood No. 5 — WikiPolish Edition</span>
+    <div class="platen-knob"></div>
+  </div>
+
+  <!-- PAPER -->
+  <div id="paper-wrap">
+
+    <!-- MASTHEAD -->
+    <div id="masthead">
+      <div class="masthead-rule"></div>
+      <h1>WikiPolish</h1>
+      <div class="masthead-sub">Grammar &amp; Spelling Scout — Wikipedia Edition</div>
+      <div class="masthead-rule"></div>
+    </div>
+
+    <!-- XP RANK STRIP -->
+    <div id="rank-strip">
+      <span class="rank-badge" id="rank-name">Newbie</span>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill"></div></div>
+      <span class="xp-fraction" id="xp-frac">0/10 edits · 0/4 days</span>
+    </div>
+
+    <!-- STATS -->
+    <div id="stats-row">
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-edits">0</div>
+        <div class="stat-lbl">Total Edits</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-today">0</div>
+        <div class="stat-lbl">Today</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-errors">0</div>
+        <div class="stat-lbl">Errors Found</div>
+      </div>
+    </div>
+
+    <!-- ADSENSE UNIT -->
+    <div id="ad-slot">
+      <ins class="adsbygoogle"
+           style="display:block;width:100%;max-width:728px;"
+           data-ad-client="ca-pub-8826956454892311"
+           data-ad-slot="auto"
+           data-ad-format="horizontal"
+           data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <!-- SEARCH -->
+    <div id="search-section">
+      <span class="section-label">Insert Article Title</span>
+      <div class="input-row">
+        <input type="text" id="article-input" placeholder="e.g.  Quantum entanglement" autocomplete="off" spellcheck="false" />
+        <button class="key-btn accent" onclick="analyzeArticle()">Analyze</button>
+        <button class="key-btn" onclick="randomArticle()">Shuffle</button>
+      </div>
+    </div>
+
+    <!-- BADGES -->
+    <div id="badge-section">
+      <div class="badge" id="b1">First Edit</div>
+      <div class="badge" id="b2">5 Edits</div>
+      <div class="badge" id="b3">Autoconfirmed</div>
+      <div class="badge" id="b4">10 Articles</div>
+      <div class="badge" id="b5">3-Day Streak</div>
+    </div>
+
+    <!-- STATUS LINE -->
+    <div id="status-line">
+      <span id="status-text">Ready. Load an article to begin proofreading.</span>
+      <span class="cursor-blink"></span>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="results-section">
+      <div class="result-header">
+        <span class="result-title" id="result-title"></span>
+        <span class="result-count" id="result-count"></span>
+      </div>
+      <div id="error-list"></div>
+      <div class="action-row" id="action-row"></div>
+    </div>
+
+  </div><!-- end paper-wrap -->
+
+  <!-- KEYBOARD DECORATION -->
+  <div id="keyboard">
+    <div class="key-row">
+      <div class="deco-key">1</div><div class="deco-key">2</div><div class="deco-key">3</div>
+      <div class="deco-key">4</div><div class="deco-key">5</div><div class="deco-key">6</div>
+      <div class="deco-key">7</div><div class="deco-key">8</div><div class="deco-key">9</div>
+      <div class="deco-key">0</div><div class="deco-key">-</div><div class="deco-key">=</div>
+      <div class="deco-key wide">DEL</div>
+    </div>
+    <div class="key-row">
+      <div class="deco-key wide">TAB</div>
+      <div class="deco-key">Q</div><div class="deco-key">W</div><div class="deco-key">E</div>
+      <div class="deco-key">R</div><div class="deco-key">T</div><div class="deco-key">Y</div>
+      <div class="deco-key">U</div><div class="deco-key">I</div><div class="deco-key">O</div>
+      <div class="deco-key">P</div><div class="deco-key">[</div><div class="deco-key">]</div>
+    </div>
+    <div class="key-row">
+      <div class="deco-key wide">CAPS</div>
+      <div class="deco-key">A</div><div class="deco-key">S</div><div class="deco-key">D</div>
+      <div class="deco-key">F</div><div class="deco-key">G</div><div class="deco-key">H</div>
+      <div class="deco-key">J</div><div class="deco-key">K</div><div class="deco-key">L</div>
+      <div class="deco-key">;</div><div class="deco-key">'</div><div class="deco-key wide">RETURN</div>
+    </div>
+    <div class="key-row">
+      <div class="deco-key wide">SHIFT</div>
+      <div class="deco-key">Z</div><div class="deco-key">X</div><div class="deco-key">C</div>
+      <div class="deco-key">V</div><div class="deco-key">B</div><div class="deco-key">N</div>
+      <div class="deco-key">M</div><div class="deco-key">,</div><div class="deco-key">.</div>
+      <div class="deco-key">/</div><div class="deco-key wide">SHIFT</div>
+    </div>
+    <div class="key-row">
+      <div class="deco-key xwide">SPACE BAR</div>
+    </div>
+  </div>
+
+</div><!-- end machine -->
+
+<!-- FOOTER -->
+<footer id="site-footer">
+  <a href="https://www.zengine.org" target="_blank" rel="noopener noreferrer">www.zengine.org</a>
+  &nbsp;·&nbsp; © 2026 Zengine™
+</footer>
+
+<!-- ============================================================
+     JAVASCRIPT
+     READS:  Wikipedia API (en.wikipedia.org/w/api.php)
+             LanguageTool API (api.languagetool.org/v2/check)
+     WRITES: localStorage (wp_edits, wp_today, wp_todayDate,
+                            wp_errors, wp_days, wp_articles)
+             DOM (results-section, stats, xp bar, badges)
+     ============================================================ -->
+<script>
+// ===== STATE =====
+var TODAY_DATE = new Date().toISOString().split('T')[0];
+
+var state = {
+  edits:     parseInt(localStorage.getItem('wp_edits')    || '0'),
+  today:     parseInt(localStorage.getItem('wp_today')    || '0'),
+  todayDate: localStorage.getItem('wp_todayDate')         || '',
+  errors:    parseInt(localStorage.getItem('wp_errors')   || '0'),
+  days:      JSON.parse(localStorage.getItem('wp_days')   || '[]'),
+  articles:  parseInt(localStorage.getItem('wp_articles') || '0'),
+  currentTitle:   '',
+  currentMatches: [],
+  currentText:    ''
+};
+
+// reset daily counter on new day
+if (state.todayDate !== TODAY_DATE) {
+  state.today    = 0;
+  state.todayDate = TODAY_DATE;
+  localStorage.setItem('wp_today',     '0');
+  localStorage.setItem('wp_todayDate', TODAY_DATE);
+}
+
+// ===== SAVE =====
+function saveState() {
+  localStorage.setItem('wp_edits',    state.edits);
+  localStorage.setItem('wp_today',    state.today);
+  localStorage.setItem('wp_todayDate',state.todayDate);
+  localStorage.setItem('wp_errors',   state.errors);
+  localStorage.setItem('wp_days',     JSON.stringify(state.days));
+  localStorage.setItem('wp_articles', state.articles);
+}
+
+// ===== RANKS =====
+var RANKS = ['Newbie','Reader','Proofreader','Copy Editor','Autoconfirmed','Reviewer'];
+
+function getRank() {
+  var idx = Math.min(Math.floor(state.edits / 2), RANKS.length - 1);
+  if (state.edits >= 10 && state.days.length >= 4) idx = 4;
+  return RANKS[idx];
+}
+
+// ===== UPDATE UI =====
+function updateUI() {
+  var pct = Math.min(100, Math.round((state.edits / 10) * 100));
+  document.getElementById('xp-fill').style.width = pct + '%';
+  document.getElementById('rank-name').textContent = getRank();
+  document.getElementById('xp-frac').textContent =
+    state.edits + '/10 edits · ' + state.days.length + '/4 days';
+  document.getElementById('stat-edits').textContent  = state.edits;
+  document.getElementById('stat-today').textContent  = state.today;
+  document.getElementById('stat-errors').textContent = state.errors;
+
+  // badges
+  if (state.edits >= 1)                              document.getElementById('b1').className = 'badge earned';
+  if (state.edits >= 5)                              document.getElementById('b2').className = 'badge earned';
+  if (state.edits >= 10 && state.days.length >= 4)  document.getElementById('b3').className = 'badge earned';
+  if (state.articles >= 10)                          document.getElementById('b4').className = 'badge earned';
+  if (state.days.length >= 3)                        document.getElementById('b5').className = 'badge earned';
+}
+
+// ===== STATUS LINE =====
+function setStatus(msg) {
+  document.getElementById('status-text').textContent = msg;
+}
+
+// ===== DING FLASH =====
+function ding() {
+  var el = document.getElementById('ding-flash');
+  el.classList.add('active');
+  setTimeout(function() { el.classList.remove('active'); }, 180);
+}
+
+// ===== ESC HTML =====
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ===== RANDOM ARTICLE =====
+function randomArticle() {
+  ding();
+  setStatus('Rolling the carriage... fetching random article...');
+  document.getElementById('results-section').style.display = 'none';
+  fetch('https://en.wikipedia.org/w/api.php?action=query&format=json&list=random&rnnamespace=0&rnlimit=1&origin=*')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var title = d.query.random[0].title;
+      document.getElementById('article-input').value = title;
+      runAnalysis(title);
+    })
+    .catch(function(e) { setStatus('Network error: ' + e.message); });
+}
+
+// ===== ANALYZE (from input) =====
+function analyzeArticle() {
+  ding();
+  var title = document.getElementById('article-input').value.trim();
+  if (!title) { setStatus('Please enter an article title first.'); return; }
+  document.getElementById('results-section').style.display = 'none';
+  runAnalysis(title);
+}
+
+// ===== MAIN ANALYSIS PIPELINE =====
+function runAnalysis(title) {
+  setStatus('Fetching "' + title + '" from Wikipedia...');
+  var wpUrl = 'https://en.wikipedia.org/w/api.php'
+    + '?action=query&format=json&prop=extracts'
+    + '&explaintext=1&exsectionformat=plain'
+    + '&exintro=1&redirects=1&origin=*'
+    + '&titles=' + encodeURIComponent(title);
+
+  fetch(wpUrl, { headers: { 'Accept': 'application/json' } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var pages = d.query.pages;
+      var page  = Object.values(pages)[0];
+      var text  = (page && page.extract) ? page.extract : '';
+      if (!text) {
+        setStatus('Article not found — check the title spelling.');
+        return;
+      }
+      state.currentTitle = page.title || title;
+      state.currentText  = text.slice(0, 4000);
+      state.articles++;
+      saveState();
+      setStatus('Running LanguageTool proofreader...');
+      return runLanguageTool(state.currentText);
+    })
+    .catch(function(e) { setStatus('Wikipedia error: ' + e.message); });
+}
+
+// ===== LANGUAGETOOL =====
+function runLanguageTool(text) {
+  var body = new URLSearchParams();
+  body.append('text', text);
+  body.append('language', 'en-US');
+
+  fetch('https://api.languagetool.org/v2/check', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    body.toString()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    state.currentMatches = d.matches || [];
+    state.errors += state.currentMatches.length;
+    saveState();
+    updateUI();
+    renderResults(state.currentTitle, state.currentText, state.currentMatches);
+    ding();
+  })
+  .catch(function(e) { setStatus('LanguageTool error: ' + e.message); });
+}
+
+// ===== RENDER RESULTS =====
+var CAT_MAP = {
+  GRAMMAR:     'grammar',
+  SPELLING:    'spelling',
+  TYPOS:       'spelling',
+  STYLE:       'style',
+  CASING:      'style',
+  PUNCTUATION: 'grammar',
+  TYPOGRAPHY:  'style'
+};
+
+function renderResults(title, text, matches) {
+  setStatus('Analysis complete — ' + matches.length + ' issue' + (matches.length !== 1 ? 's' : '') + ' found in "' + title + '".');
+
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-count').textContent =
+    matches.length + ' issue' + (matches.length !== 1 ? 's' : '');
+
+  var list = document.getElementById('error-list');
+  list.innerHTML = '';
+
+  if (matches.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--ink-ghost);font-style:italic;padding:0.5rem 0;">No issues detected in the intro — article looks clean. Try a different article.</p>';
+  } else {
+    matches.slice(0, 20).forEach(function(m, i) {
+      var catId = (m.rule && m.rule.category && m.rule.category.id) || 'GRAMMAR';
+      var type  = CAT_MAP[catId] || 'grammar';
+      var word  = text.slice(m.offset, m.offset + m.length);
+      var fix   = (m.replacements && m.replacements[0]) ? m.replacements[0].value : '';
+
+      var card = document.createElement('div');
+      card.className = 'error-card';
+      card.style.animationDelay = (i * 0.04) + 's';
+
+      var gutterHtml = '<div class="err-gutter"><span class="err-dot ' + type + '"></span></div>';
+      var bodyHtml   =
+        '<div class="err-body">' +
+          '<div class="err-type-label ' + type + '">' + type + '</div>' +
+          '<div class="err-message">' + esc(m.message) + '</div>' +
+          '<div class="err-word-wrap">' +
+            '<span class="err-word">' + esc(word) + '</span>' +
+            (fix ? '<span class="err-arrow">→</span><span class="err-fix">' + esc(fix) + '</span>' : '') +
+          '</div>' +
+        '</div>';
+
+      card.innerHTML = gutterHtml + bodyHtml;
+      list.appendChild(card);
+    });
+  }
+
+  // action buttons
+  var editUrl = 'https://en.wikipedia.org/w/index.php?title='
+    + encodeURIComponent(title)
+    + '&action=edit&summary=Grammar%2Fspelling+fixes+(WikiPolish+%E2%80%94+zengine.org)';
+
+  var actionRow = document.getElementById('action-row');
+  actionRow.innerHTML =
+    '<button class="key-btn accent" onclick="window.open(\'' + editUrl + '\',\'_blank\')">Edit on Wikipedia</button>' +
+    (matches.length > 0
+      ? '<button class="key-btn" id="log-btn" onclick="logEdit()">+ Log Edit</button>'
+      : '') +
+    '<button class="key-btn" onclick="randomArticle()">Next Article →</button>';
+
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ===== LOG EDIT =====
+function logEdit() {
+  state.edits++;
+  state.today++;
+  if (state.days.indexOf(TODAY_DATE) === -1) state.days.push(TODAY_DATE);
+  saveState();
+  updateUI();
+  ding();
+  var btn = document.getElementById('log-btn');
+  if (btn) {
+    btn.textContent = 'Logged ✓';
+    btn.disabled = true;
+    setTimeout(function() {
+      btn.textContent = '+ Log Edit';
+      btn.disabled = false;
+    }, 2500);
+  }
+  setStatus('Edit logged. ' + state.edits + '/10 · ' + state.days.length + '/4 days toward autoconfirmed.');
+}
+
+// ===== KEYBOARD EASTER EGG — typing clack =====
+document.addEventListener('keydown', function(e) {
+  ding();
+});
+
+// ===== INIT =====
+updateUI();
+</script>
+</body>
+</html>
